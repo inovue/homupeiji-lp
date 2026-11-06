@@ -1,5 +1,5 @@
 ---
-// 電網山 訪夢平寺 LP — ページ本体は試作で検証済みの静的HTMLをそのまま使う。
+// 電網山 訪夢平寺 LP — 全画面マップ型にゼロベース刷新（旧試作の実証済み部品を再利用）。
 // Astro側はこのファイルを dist/index.html として書き出すだけに留め、振る舞いは is:inline の CSS/JS が担う。
 ---
 <!doctype html>
@@ -193,6 +193,36 @@ section.spotsec .kicker{display:inline-block;background:linear-gradient(180deg,#
 html[data-phase="night"] .mapimg{filter:none}
 html[data-phase="night"] .nightveil{opacity:.10}
 html[data-phase="night"] .lamp{opacity:0}
+
+/* ================= ZERO-BASE: FULLSCREEN MAP ================= */
+html,body{height:100%}
+body{overflow:hidden}
+.hero{padding:0;height:100dvh}
+.mapwrap{position:fixed;inset:0;max-width:none;width:auto;height:auto;border-radius:0;aspect-ratio:auto;box-shadow:none}
+.world{left:0;top:0;right:auto;bottom:auto}
+.world picture{display:block;width:100%;height:100%}
+.mapimg{width:100%;height:100%;object-fit:fill;display:block}
+.scrolldown{display:none}
+footer{display:none}
+.hud-walk{bottom:70px}
+.hud-hint{top:56px;bottom:auto;left:50%;right:auto;transform:translateX(-50%);transition:opacity .6s ease,visibility 0s linear .6s}
+.hud-hint.gone{opacity:0;visibility:hidden}
+.panel{position:fixed;top:0;right:0;height:100dvh;width:min(440px,100vw);background:var(--paper);color:var(--ink);z-index:60;transform:translateX(105%);transition:transform .45s cubic-bezier(.2,.9,.25,1);overflow-y:auto;padding:30px 28px 44px;box-shadow:-18px 0 50px rgba(10,15,22,.35)}
+.panel.open{transform:translateX(0)}
+.panel .kicker{display:inline-block;background:linear-gradient(180deg,#4a3a2a,#37281c);color:#ecd9a0;border:1px solid #c8a75a;border-radius:4px;padding:5px 12px;letter-spacing:.22em;font-family:var(--sans);font-size:11px}
+.panel h2{font-size:27px;margin:14px 0 10px;letter-spacing:.06em}
+.panel .lead{line-height:2;font-size:15px}
+.panelclose{position:absolute;top:10px;right:12px;width:38px;height:38px;border-radius:50%;border:1px solid color-mix(in srgb,var(--ink) 25%,transparent);background:var(--card);color:var(--ink);font-size:18px;cursor:pointer;z-index:2}
+.panelgrab{display:none}
+@media (max-width:640px){
+  footer{display:none}
+  .panel{top:auto;bottom:0;left:0;right:0;width:auto;height:min(74dvh,780px);transform:translateY(105%);border-radius:18px 18px 0 0;padding:6px 20px 110px;box-shadow:0 -18px 50px rgba(10,15,22,.35)}
+  .panel.open{transform:translateY(0)}
+  .panelgrab{display:flex;justify-content:center;padding:6px 0 8px;cursor:grab;touch-action:none}
+  .panelgrab span{display:block;width:46px;height:5px;border-radius:99px;background:#c9c2ae}
+  .panelclose{top:16px}
+  .hud-walk{bottom:118px}
+}
 </style>
 </head>
 <body>
@@ -229,6 +259,7 @@ html[data-phase="night"] .lamp{opacity:0}
       <a class="hud hud-right" href="#sec-hondo">AI am 坊主 ― ポッドキャスト</a>
       <button class="hud hud-reset" id="camReset" type="button">← 境内全体にもどる</button>
       <button class="hud hud-walk" id="walkBtn" type="button">参道を歩く</button>
+      <div class="hud hud-hint" id="hintChip">札をタップすると、境内を飛べます</div>
       <button class="spot sp-sanmon" data-spot="sanmon"><span class="no">1 ― GATE</span><span class="nm">山門</span></button>
       <button class="spot sp-chozuya" data-spot="chozuya"><span class="no">2 ― WATER</span><span class="nm">手水舎</span></button>
       <button class="spot sp-hondo" data-spot="hondo"><span class="no">3 ― MAIN HALL</span><span class="nm">本堂</span></button>
@@ -243,7 +274,7 @@ html[data-phase="night"] .lamp{opacity:0}
   </div>
 
 <!-- ================= SPOT SECTIONS (the sando) ================= -->
-<section class="spotsec" id="sec-chozuya" data-mm="chozuya">
+<article class="panel" id="sec-chozuya" data-panel="chozuya"><button class="panelclose" data-close aria-label="閉じる">×</button><div class="panelgrab" aria-hidden="true"><span></span></div>
 <div class="kicker">2 ― 手水舎 CHOZUYA</div>
 <h2>手を清めてから、どうぞ</h2>
 <p class="lead">参拝の前に、手と口を清める場所。ここでは、寺の名前が水面に映ります。水は止まらないので、文字も止まりません。それでも、読める。――HTML-in-Canvasが目指すのは、そういう文字です。</p>
@@ -252,15 +283,15 @@ html[data-phase="night"] .lamp{opacity:0}
 <div class="reflectbox" aria-hidden="true"><div class="base">訪夢平寺</div><div class="refl">訪夢平寺</div></div>
 <p class="note">水面の文字は、揺れていても文字のままです。触って選ぶことも、読み上げることもできます。</p>
 </div>
-</section>
+</article>
 
-<section class="spotsec" id="sec-kyozo" data-mm="kyozo">
+<article class="panel" id="sec-kyozo" data-panel="kyozo"><button class="panelclose" data-close aria-label="閉じる">×</button><div class="panelgrab" aria-hidden="true"><span></span></div>
 <div class="kicker">経蔵 KYOZO</div>
 <h2>読まない本も、あります</h2>
 <p class="lead">経蔵には、一切経が収まっています。輪蔵を一回りさせると、全部読んだことになる――昔の人の、ありがたい知恵です。積ん読を責める前に、まず回しに来てください。住職の積ん読も、ここに混ぜてあります。</p>
-</section>
+</article>
 
-<section class="spotsec" id="sec-hondo" data-mm="hondo">
+<article class="panel" id="sec-hondo" data-panel="hondo"><button class="panelclose" data-close aria-label="閉じる">×</button><div class="panelgrab" aria-hidden="true"><span></span></div>
 <div class="kicker">3 ― 本堂 HONDO</div>
 <h2>本堂では、法話を聴く</h2>
 <p class="lead">住職・飯音三休が、AI時代の悩みに仏教で答えるポッドキャスト「AI am 坊主」。再生はSpotifyで。本堂は、その入口です。</p>
@@ -269,21 +300,21 @@ html[data-phase="night"] .lamp{opacity:0}
 <a class="card" href="https://open.spotify.com/show/4SH62LuyNGAdZAuJ1Tquhd" target="_blank" rel="noopener"><span class="tag">自己紹介</span><div class="t">焦燥したら、AIに220ドル課金していた件</div><div class="m">この寺ができた理由の話</div></a>
 <a class="card" href="https://www.instagram.com/aiambz/" target="_blank" rel="noopener"><span class="tag">法話リール</span><div class="t">短い法話は、InstagramとThreadsで毎日</div><div class="m">@aiambz</div></a>
 </div>
-</section>
+</article>
 
-<section class="spotsec" id="sec-pagoda" data-mm="pagoda">
+<article class="panel" id="sec-pagoda" data-panel="pagoda"><button class="panelclose" data-close aria-label="閉じる">×</button><div class="panelgrab" aria-hidden="true"><span></span></div>
 <div class="kicker">五重塔 PAGODA</div>
 <h2>塔は、空に置く手紙</h2>
 <p class="lead">本堂の西に立つ五重塔。真ん中を貫く心柱が、揺れを逃がします。いちばん大事なものは、いちばん高いところに置く。手は届かなくても、そこにあるとわかるだけでいいものが、人生にはあります。</p>
-</section>
+</article>
 
-<section class="spotsec" id="sec-hodo" data-mm="hodo">
+<article class="panel" id="sec-hodo" data-panel="hodo"><button class="panelclose" data-close aria-label="閉じる">×</button><div class="panelgrab" aria-hidden="true"><span></span></div>
 <div class="kicker">法堂 HODO</div>
 <h2>説法は、奥でします</h2>
 <p class="lead">本堂の真裏が法堂。法話をするための間です。ポッドキャスト「AI am 坊主」の法話も、気持ちの上では、ここから届けています。本堂で聴き足りなかったら、もう一歩奥へどうぞ。</p>
-</section>
+</article>
 
-<section class="spotsec" id="sec-bell" data-mm="bell">
+<article class="panel" id="sec-bell" data-panel="bell"><button class="panelclose" data-close aria-label="閉じる">×</button><div class="panelgrab" aria-hidden="true"><span></span></div>
 <div class="kicker">鐘楼 SHORO</div>
 <h2>鐘は、境内ぜんたいに響く</h2>
 <p class="lead">鐘を撞くと、波紋がマップを渡り、触れたカードが小さく揺れます。音は出しません。波だけが、静かに届きます。</p>
@@ -293,9 +324,9 @@ html[data-phase="night"] .lamp{opacity:0}
 <button class="btn" id="ringBtn">鐘を撞く（波紋）</button>
 <button class="btn ghost" id="ringTopBtn">マップへ戻って撞く</button>
 </div>
-</section>
+</article>
 
-<section class="spotsec" id="sec-pond" data-mm="pond">
+<article class="panel" id="sec-pond" data-panel="pond"><button class="panelclose" data-close aria-label="閉じる">×</button><div class="panelgrab" aria-hidden="true"><span></span></div>
 <div class="kicker">庭・池 GARDEN POND</div>
 <h2>言葉を、池に沈める</h2>
 <p class="lead">今の気持ちを短く書くと、水面に映ってから、静かに沈みます。送信も保存もされません。この場かぎりの、参拝です。</p>
@@ -311,9 +342,9 @@ html[data-phase="night"] .lamp{opacity:0}
 </p>
 <p class="note" id="pondTech"></p>
 </div>
-</section>
+</article>
 
-<section class="spotsec" id="sec-shoin" data-mm="shoin">
+<article class="panel" id="sec-shoin" data-panel="shoin"><button class="panelclose" data-close aria-label="閉じる">×</button><div class="panelgrab" aria-hidden="true"><span></span></div>
 <div class="kicker">書院 SHOIN</div>
 <h2>言葉は、書院に残る</h2>
 <p class="lead">法話のテキストと短い言葉は、書院の棚に。読む参拝はこちらから。</p>
@@ -330,11 +361,9 @@ html[data-phase="night"] .lamp{opacity:0}
 <div class="card"><span class="tag">近日公開</span><div class="t">今夜の池 ― 言葉を沈めるだけの場所</div><div class="m">Webアプリ ― 試作中</div></div>
 </div>
 </div>
-</section>
+</article>
 </main>
 
-<div class="sheet" id="sheet" role="dialog" aria-modal="false" aria-labelledby="sheetTitle">
-<div class="sheetgrab" id="sheetGrab" aria-hidden="true"><span></span></div>
 <button class="close" id="sheetClose" aria-label="閉じる">×</button>
 <h3 id="sheetTitle"></h3><p id="sheetBody"></p>
 <a class="go" id="sheetGo" href="#">この場所へ行く</a>
@@ -402,18 +431,30 @@ function tickClock(){
 tickClock(); setInterval(tickClock, 30000);
 
 
-/* ---------- camera: fly, drag, pinch, walk ---------- */
+/* ---------- camera over a cover-fitted world: fly, drag, pinch, walk ---------- */
 const mapwrap=$("#mapwrap");
 const world=document.createElement("div"); world.className="world"; world.id="world";
 [...mapwrap.children].forEach(ch=>{ if(!ch.classList.contains("hud")) world.appendChild(ch); });
 mapwrap.appendChild(world);
-const camReset=$("#camReset"), walkBtn=$("#walkBtn");
+const camReset=$("#camReset"), walkBtn=$("#walkBtn"), hintChip=$("#hintChip");
 let cam={s:1,tx:0,ty:0};
-function clampCam(){ const W=mapwrap.clientWidth,H=mapwrap.clientHeight;
-  cam.tx=Math.min(0,Math.max(W-W*cam.s,cam.tx)); cam.ty=Math.min(0,Math.max(H-H*cam.s,cam.ty)); }
+let baseTx=0, baseTy=0, W0=0, H0=0;
+function fitWorld(){
+  const SW=mapwrap.clientWidth, SH=mapwrap.clientHeight;
+  const asp=innerWidth<=640? 0.5 : 1.5;
+  W0=Math.max(SW, SH*asp); H0=W0/asp;
+  baseTx=(SW-W0)/2; baseTy=(SH-H0)/2;
+  world.style.width=W0+"px"; world.style.height=H0+"px";
+  clampCam(); applyCam(false);
+}
+function clampCam(){
+  const SW=mapwrap.clientWidth, SH=mapwrap.clientHeight;
+  cam.tx=Math.min(-baseTx, Math.max(SW-W0*cam.s-baseTx, cam.tx));
+  cam.ty=Math.min(-baseTy, Math.max(SH-H0*cam.s-baseTy, cam.ty));
+}
 function applyCam(anim){
   world.style.transition=anim===false? "none": "";
-  world.style.transform="translate("+cam.tx+"px,"+cam.ty+"px) scale("+cam.s+")";
+  world.style.transform="translate("+(baseTx+cam.tx)+"px,"+(baseTy+cam.ty)+"px) scale("+cam.s+")";
   world.style.setProperty("--inv",String(1/cam.s));
   camReset.classList.toggle("show",cam.s>1.02);
   mapwrap.style.touchAction=cam.s>1.02? "none":"pan-y";
@@ -421,15 +462,18 @@ function applyCam(anim){
 }
 function spotXY(el){ const cs=getComputedStyle(el); return [parseFloat(cs.getPropertyValue("--x")), parseFloat(cs.getPropertyValue("--y"))]; }
 function flyTo(x,y){
-  const W=mapwrap.clientWidth,H=mapwrap.clientHeight;
-  cam.s=innerWidth<=640?2.6:2.2;
-  cam.tx=W/2-(x/100*W)*cam.s; cam.ty=H/2-(y/100*H)*cam.s;
+  const SW=mapwrap.clientWidth, SH=mapwrap.clientHeight;
+  cam.s=innerWidth<=640? 2.4 : 2.0;
+  cam.tx=SW/2-baseTx-cam.s*(x/100*W0);
+  cam.ty=SH/2-baseTy-cam.s*(y/100*H0);
   clampCam(); applyCam(true); travelDot(x,y);
+  if(hintChip) hintChip.classList.add("gone");
   if(navigator.vibrate) setTimeout(()=>navigator.vibrate(10), reduceMotion?0:1150);
 }
 function resetCam(){ cam={s:1,tx:0,ty:0}; applyCam(true); walkIdx=-1; syncWalk(); }
-camReset.addEventListener("click",()=>{ resetCam(); closeSheet(); });
-addEventListener("keydown",e=>{ if(e.key==="Escape"){ resetCam(); closeSheet(); } });
+camReset.addEventListener("click",()=>{ resetCam(); closePanels(); });
+addEventListener("keydown",e=>{ if(e.key==="Escape"){ resetCam(); closePanels(); } });
+addEventListener("resize",()=>{ fitWorld(); sizeRipple(); });
 function travelDot(x,y){
   if(reduceMotion) return;
   const svg=innerWidth<=640? $(".route-sp") : $(".route-pc"); if(!svg) return;
@@ -473,8 +517,8 @@ addEventListener("pointermove",e=>{
     if(pinchD0>0){
       const r=mapwrap.getBoundingClientRect(), mx=(v[0].x+v[1].x)/2-r.left, my=(v[0].y+v[1].y)/2-r.top;
       const ns=Math.min(3.4,Math.max(1,pinchS0*d/pinchD0));
-      const wx=(mx-cam.tx)/cam.s, wy=(my-cam.ty)/cam.s;
-      cam.s=ns; cam.tx=mx-wx*ns; cam.ty=my-wy*ns; clampCam(); applyCam(false);
+      const wx=(mx-baseTx-cam.tx)/cam.s, wy=(my-baseTy-cam.ty)/cam.s;
+      cam.s=ns; cam.tx=mx-baseTx-wx*ns; cam.ty=my-baseTy-wy*ns; clampCam(); applyCam(false);
     }
   }
 });
@@ -488,68 +532,53 @@ let walkIdx=-1;
 function syncWalk(){ if(!walkBtn) return;
   walkBtn.textContent = walkIdx<0? "参道を歩く" : (walkIdx>=WALK.length-1? "お参りをおえる" : "次は "+WALK[walkIdx+1][1]+" へ"); }
 walkBtn.addEventListener("click",()=>{
-  $("#top").scrollIntoView({behavior:reduceMotion?"auto":"smooth"});
-  if(walkIdx>=WALK.length-1){ resetCam(); closeSheet(); return; }
+  if(walkIdx>=WALK.length-1){ resetCam(); closePanels(); return; }
   walkIdx++;
   const key=WALK[walkIdx][0], btn=document.querySelector('.spot[data-spot="'+key+'"]');
-  const xy=spotXY(btn); flyTo(xy[0],xy[1]); openSheet(key); syncWalk();
+  const xy=spotXY(btn); flyTo(xy[0],xy[1]); openPanel(key); syncWalk();
 });
 syncWalk();
+fitWorld();
 
 /* ---------- minimap: current position + flight ---------- */
 const mmBtns=$$(".minimap button");
 const mmMap={ "top":null,"sec-chozuya":"chozuya","sec-kyozo":"kyozo","sec-hondo":"hondo","sec-pagoda":"pagoda","sec-hodo":"hodo","sec-bell":"bell","sec-pond":"pond","sec-shoin":"shoin"};
 mmBtns.forEach(b=>b.addEventListener("click",()=>{
 const id=b.dataset.goto;
-$("#top").scrollIntoView({behavior:reduceMotion?"auto":"smooth"});
-if(id==="top"){ resetCam(); closeSheet(); return; }
+if(id==="top"){ resetCam(); closePanels(); return; }
 const key=mmMap[id], btn=key&&document.querySelector('.spot[data-spot="'+key+'"]');
-if(btn){ const xy=spotXY(btn); flyTo(xy[0],xy[1]); openSheet(key); walkIdx=WALK.findIndex(w=>w[0]===key); syncWalk(); }
+if(btn){ const xy=spotXY(btn); flyTo(xy[0],xy[1]); openPanel(key); walkIdx=WALK.findIndex(w=>w[0]===key); syncWalk(); }
 }));
-const secObs=new IntersectionObserver(es=>{
-es.forEach(e=>{
-if(!e.isIntersecting) return;
-const key=e.target.id==="top"?"top":e.target.id;
-mmBtns.forEach(b=>b.classList.toggle("now", b.dataset.goto===key));
-});
-},{rootMargin:"-38% 0px -50% 0px"});
-secObs.observe($("#top")); $$("section.spotsec").forEach(s=>secObs.observe(s));
 
-/* ---------- spot sheet ---------- */
-const SPOTS={
-sanmon:{t:"山門",b:"ここが入口です。順路は、手水舎、本堂の順。札や下の案内をタップすると、境内を飛んでその場所までご案内します。",go:"#sec-chozuya",gol:"参道へ進む"},
-chozuya:{t:"手水舎",b:"寺号が水面に映る場所。文字は揺れても、実DOMのまま読める――それがこの寺の文字です。",go:"#sec-chozuya",gol:"手水舎へ行く"},
-hondo:{t:"本堂",b:"法話を聴く場所。最新話と自己紹介エピソードへの入口があります。再生はSpotifyで。",go:"#sec-hondo",gol:"本堂へ行く"},
-bell:{t:"鐘楼",b:"鐘を撞くと波紋が境内を渡り、札が揺れます。音は出ません。",go:"#sec-bell",gol:"鐘楼へ行く",bell:true},
-pond:{t:"庭・池",b:"言葉を書くと、水面に映って沈む場所。送信も保存もされません。",go:"#sec-pond",gol:"池へ行く"},
-pagoda:{name:"五重塔",en:"PAGODA",desc:"本堂の西。心柱が揺れを逃がす、空に置く手紙。"},
-    kyozo:{name:"経蔵",en:"SUTRA STOREHOUSE",desc:"一切経の蔵。輪蔵を一回りさせれば、全部読んだことになります。"},
-    hodo:{name:"法堂",en:"LECTURE HALL",desc:"本堂の真裏。法話の間。配信も、気持ちはここから。"},
-    shoin:{t:"書院",b:"法話の言葉と、別院（Webアプリ・ミニゲーム）の棚。",go:"#sec-shoin",gol:"書院へ行く"}
-};
-const sheet=$("#sheet");
-function openSheet(key){
-const s=SPOTS[key]; if(!s) return;
-$("#sheetTitle").textContent=s.t; $("#sheetBody").textContent=s.b;
-const go=$("#sheetGo"); go.textContent=s.gol; go.setAttribute("href",s.go);
-$("#sheetBell").style.display=s.bell?"inline-block":"none";
-sheet.classList.add("open");
+
+/* ---------- panels: spot content lives on the map ---------- */
+const panels={}; $$(".panel").forEach(p=>{ panels[p.dataset.panel]=p; });
+let openKey=null;
+function openPanel(key){
+  const p=panels[key]; if(!p) return;
+  $$(".panel.open").forEach(q=>q.classList.remove("open"));
+  p.classList.add("open"); p.scrollTop=0; openKey=key;
+  mmBtns.forEach(b=>b.classList.toggle("now", mmMap[b.dataset.goto]===key));
 }
-function closeSheet(){ sheet.classList.remove("open");}
-const sheetGoEl=$(".sheet .go"); if(sheetGoEl) sheetGoEl.addEventListener("click",()=>resetCam());
-(function(){
-  const grab=$("#sheetGrab"), sheetEl=$("#sheet"); if(!grab||!sheetEl) return;
-  let y0=null, dy=0;
-  grab.addEventListener("pointerdown",e=>{ y0=e.clientY; dy=0; sheetEl.style.transition="none"; grab.setPointerCapture(e.pointerId); });
-  grab.addEventListener("pointermove",e=>{ if(y0===null) return; dy=Math.max(0,e.clientY-y0);
-    sheetEl.style.transform="translate(-50%,"+dy+"px)"; });
-  grab.addEventListener("pointerup",()=>{ sheetEl.style.transition=""; sheetEl.style.transform="";
-    if(dy>70) closeSheet(); y0=null; });
-})();
-$$(".spot").forEach(b=>b.addEventListener("click",()=>{ openSheet(b.dataset.spot); const xy=spotXY(b); flyTo(xy[0],xy[1]); walkIdx=WALK.findIndex(w=>w[0]===b.dataset.spot); syncWalk(); }));
-$("#sheetClose").addEventListener("click",closeSheet);
-$("#sheetGo").addEventListener("click",closeSheet);
-document.addEventListener("keydown",e=>{ if(e.key==="Escape") closeSheet();});
+function closePanels(){
+  $$(".panel.open").forEach(q=>q.classList.remove("open"));
+  openKey=null;
+  mmBtns.forEach(b=>b.classList.toggle("now", b.dataset.goto==="top"));
+}
+$$("[data-close]").forEach(b=>b.addEventListener("click",closePanels));
+$$(".panelgrab").forEach(g=>{
+  const p=g.closest(".panel"); let y0=null, dy=0;
+  g.addEventListener("pointerdown",e=>{ y0=e.clientY; dy=0; p.style.transition="none"; g.setPointerCapture(e.pointerId); });
+  g.addEventListener("pointermove",e=>{ if(y0===null) return; dy=Math.max(0,e.clientY-y0);
+    p.style.transform="translateY("+dy+"px)"; });
+  g.addEventListener("pointerup",()=>{ p.style.transition=""; p.style.transform=""; if(dy>70) closePanels(); y0=null; });
+});
+const hudPod=$(".hud-right");
+if(hudPod) hudPod.addEventListener("click",e=>{ e.preventDefault();
+  const b=$('.spot[data-spot="hondo"]'); const xy=spotXY(b); flyTo(xy[0],xy[1]); openPanel("hondo"); });
+
+$$(".spot").forEach(b=>b.addEventListener("click",()=>{ openPanel(b.dataset.spot); const xy=spotXY(b); flyTo(xy[0],xy[1]); walkIdx=WALK.findIndex(w=>w[0]===b.dataset.spot); syncWalk(); }));
+document.addEventListener("keydown",e=>{ if(e.key==="Escape") closePanels(); });
 
 /* ---------- bell ripple across the map (signature 2) ---------- */
 const rc=$("#rippleCanvas"), rctx=rc.getContext("2d");
@@ -586,9 +615,13 @@ function rippleLoop(now){
   }
   if(ripples.length) requestAnimationFrame(rippleLoop); else rctx.clearRect(0,0,rc.width,rc.height);
 }
-$("#sheetBell").addEventListener("click",()=>{ closeSheet(); $("#top").scrollIntoView({behavior:reduceMotion?"auto":"smooth"}); setTimeout(()=>ringBell(), reduceMotion?0:650); });
-$("#ringBtn").addEventListener("click",()=>{ $("#top").scrollIntoView({behavior:reduceMotion?"auto":"smooth"}); setTimeout(()=>ringBell(), reduceMotion?0:650); });
-$("#ringTopBtn").addEventListener("click",()=>{ $("#top").scrollIntoView({behavior:reduceMotion?"auto":"smooth"}); });
+function ringFromPanel(){
+  closePanels();
+  const b=$("#bellSpot"); const xy=spotXY(b); flyTo(xy[0],xy[1]);
+  setTimeout(()=>ringBell(), reduceMotion?0:750);
+}
+$("#ringBtn").addEventListener("click",ringFromPanel);
+$("#ringTopBtn").addEventListener("click",ringFromPanel);
 
 /* ---------- chozuya reflection wobble ---------- */
 (()=>{ const disp=$("#wobbleDisp"), turb=$("#wobbleTurb"); if(!disp||reduceMotion) return;
