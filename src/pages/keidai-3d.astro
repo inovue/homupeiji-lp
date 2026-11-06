@@ -78,10 +78,12 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
 const stage = document.getElementById('stage');
 let renderer;
@@ -99,6 +101,9 @@ renderer.toneMapping = THREE.ACESFilmicToneMapping;
 stage.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+scene.environmentIntensity = 0.1;
 scene.background = new THREE.Color(0x0d1524);
 scene.fog = new THREE.Fog(0x0d1524, 55, 120);
 const camera = new THREE.PerspectiveCamera(46, innerWidth/innerHeight, 0.1, 300);
@@ -126,10 +131,10 @@ const lanterns = [];
 
 /* ---- phases: the real clock decides, chips override for looking ---- */
 const PHASES = {
-  dawn:  { sun:0xffb877, sunI:1.7, sunPos:[-16,7,12],  hemiI:0.5,  bg:0x35445e, fog:[40,110], lantern:5,  win:0.5,  bloom:0.28, expo:1.0 },
-  noon:  { sun:0xfff1da, sunI:2.7, sunPos:[11,19,7],   hemiI:0.95, bg:0xccd6cf, fog:[70,160], lantern:0,  win:0.0,  bloom:0.10, expo:1.02 },
-  dusk:  { sun:0xff9a56, sunI:1.5, sunPos:[-16,4,-5],  hemiI:0.45, bg:0x3c4664, fog:[42,115], lantern:7,  win:0.75, bloom:0.38, expo:1.0 },
-  night: { sun:0x8fb4ff, sunI:0.55, sunPos:[-9,15,-7], hemiI:0.22, bg:0x0d1524, fog:[48,120], lantern:9,  win:1.25, bloom:0.62, expo:1.05 }
+  dawn:  { envI:0.08, sun:0xffb877, sunI:1.7, sunPos:[-16,7,12],  hemiI:0.5,  bg:0x35445e, fog:[40,110], lantern:5,  win:0.5,  bloom:0.28, expo:1.0 },
+  noon:  { envI:0.12, sun:0xfff1da, sunI:2.5, sunPos:[11,19,7],   hemiI:0.55,  bg:0xd6dbcc, fog:[70,160], lantern:0,  win:0.0,  bloom:0.10, expo:1.0 },
+  dusk:  { envI:0.08, sun:0xff9a56, sunI:1.5, sunPos:[-16,4,-5],  hemiI:0.45, bg:0x3c4664, fog:[42,115], lantern:7,  win:0.75, bloom:0.38, expo:1.0 },
+  night: { envI:0.05, sun:0x8fb4ff, sunI:0.55, sunPos:[-9,15,-7], hemiI:0.32, bg:0x0d1524, fog:[48,120], lantern:9,  win:1.25, bloom:0.62, expo:1.05 }
 };
 let winMats = [];
 function applyPhase(name){
@@ -137,6 +142,7 @@ function applyPhase(name){
   sun.color.setHex(P.sun); sun.intensity = P.sunI;
   sun.position.set(...P.sunPos);
   hemi.intensity = P.hemiI;
+  scene.environmentIntensity = P.envI ?? 0.1;
   scene.background.setHex(P.bg);
   scene.fog.color.setHex(P.bg); scene.fog.near = P.fog[0]; scene.fog.far = P.fog[1];
   lanterns.forEach(l => l.intensity = P.lantern);
@@ -150,11 +156,17 @@ let phaseWanted = new URLSearchParams(location.search).get('phase') || clockPhas
 
 /* ---- load the precinct ---- */
 const loader = new GLTFLoader();
+loader.setMeshoptDecoder(MeshoptDecoder);
 loader.load('../assets/keidai-v4.glb', (gltf) => {
   const model = gltf.scene;
+  const paperMats = new Set();
   model.traverse(o => {
     if (o.isMesh) {
       o.castShadow = true; o.receiveShadow = true;
+      if (o.material && o.material.isMeshStandardMaterial && !/Window/.test(o.name)) {
+        o.material.vertexColors = true;
+        paperMats.add(o.material);
+      }
       if (/Window/.test(o.name)) {
         const m = new THREE.MeshStandardMaterial({ color:0x2a2118, emissive:0xffb45c, emissiveIntensity:0, roughness:.6 });
         o.material = m; winMats.push(m);
@@ -163,6 +175,24 @@ loader.load('../assets/keidai-v4.glb', (gltf) => {
         o.material.roughness = 0.12; o.material.metalness = 0.25;
       }
     }
+  });
+  paperMats.forEach(m => {
+    m.onBeforeCompile = (sh) => {
+      sh.vertexShader = 'varying vec3 vPaperWP;\n' + sh.vertexShader.replace(
+        '#include <worldpos_vertex>',
+        '#include <worldpos_vertex>\n vPaperWP = (modelMatrix * vec4(transformed,1.0)).xyz;');
+      sh.fragmentShader = ('varying vec3 vPaperWP;\n' +
+        'float phash(vec3 p){ p=fract(p*0.3183099+vec3(0.1,0.17,0.13)); p*=17.0; return fract(p.x*p.y*p.z*(p.x+p.y+p.z)); }\n' +
+        'float pnoise(vec3 x){ vec3 i=floor(x); vec3 f=fract(x); f=f*f*(3.0-2.0*f);' +
+        ' return mix(mix(mix(phash(i+vec3(0,0,0)),phash(i+vec3(1,0,0)),f.x),mix(phash(i+vec3(0,1,0)),phash(i+vec3(1,1,0)),f.x),f.y),' +
+        ' mix(mix(phash(i+vec3(0,0,1)),phash(i+vec3(1,0,1)),f.x),mix(phash(i+vec3(0,1,1)),phash(i+vec3(1,1,1)),f.x),f.y),f.z); }\n'
+      ) + sh.fragmentShader
+        .replace('#include <color_fragment>',
+          '#include <color_fragment>\n float pgrain = pnoise(vPaperWP*20.0)*0.62 + pnoise(vPaperWP*64.0)*0.38;\n diffuseColor.rgb *= (0.93 + 0.11*pgrain);')
+        .replace('#include <roughnessmap_fragment>',
+          '#include <roughnessmap_fragment>\n roughnessFactor = clamp(roughnessFactor + (pgrain-0.5)*0.28, 0.05, 1.0);');
+    };
+    m.customProgramCacheKey = () => 'paper-v1';
   });
   scene.add(model);
   applyPhase(phaseWanted);
