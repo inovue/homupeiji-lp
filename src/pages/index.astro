@@ -1,0 +1,667 @@
+---
+// 電網山 訪夢平寺 LP — ページ本体は試作で検証済みの静的HTMLをそのまま使う。
+// Astro側はこのファイルを dist/index.html として書き出すだけに留め、振る舞いは is:inline の CSS/JS が担う。
+---
+<!doctype html>
+<html lang="ja" data-phase="dawn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>電網山 訪夢平寺｜AI am 坊主</title>
+<meta name="description" content="AIに疲れたら、お寺へどうぞ。架空の寺・電網山訪夢平寺の境内をご案内します。ポッドキャスト「AI am 坊主」公式参拝ページ（試作）。">
+<style is:inline>
+:root{
+  --ink:#2b2f33; --paper:#f4f1e8;
+  --sky:#aeb9ca; --ground:#b9c0ab; --path:#ddd5c2; --water:#7f97a8;
+  --roof:#4c5866; --warm:#e8b34b; --glow-o:0; --night-o:0;
+  --card:#fbf9f3; --accent:#31556e;
+  --serif:"Hiragino Mincho ProN","Hiragino Mincho Pro","Yu Mincho","YuMincho","Noto Serif JP",serif;
+  --sans:"Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic UI","Noto Sans JP",sans-serif;
+}
+html[data-phase="noon"]{ --sky:#c3d3dd; --ground:#bfc7a9; --water:#86a9bc; --roof:#55626f; --glow-o:0; --night-o:0; }
+html[data-phase="dusk"]{ --sky:#c99b6d; --ground:#a9a184; --water:#7d8b9b; --roof:#4a4a55; --warm:#f0a845; --glow-o:.55; --night-o:.18; }
+html[data-phase="night"]{ --sky:#1d2739; --ground:#3c4653; --path:#6d6a5e; --water:#33506b; --roof:#232b38; --ink:#e8e2d2; --card:#232b38; --paper:#161d29; --glow-o:1; --night-o:.38; --accent:#d9b45c; }
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;font-family:var(--serif);color:var(--ink);background:var(--paper);transition:background 1.2s ease,color 1.2s ease}
+a{color:inherit}
+header.site{position:fixed;inset:0 0 auto 0;z-index:60;display:flex;align-items:center;gap:14px;padding:10px 16px;background:color-mix(in srgb,var(--paper) 82%,transparent);backdrop-filter:blur(6px);border-bottom:1px solid color-mix(in srgb,var(--ink) 14%,transparent)}
+header.site .brand{font-size:15px;letter-spacing:.18em}
+header.site .brand small{font-family:var(--sans);font-size:10px;letter-spacing:.12em;opacity:.75;display:block}
+header.site nav{margin-left:auto;display:flex;gap:6px;align-items:center}
+.phasebtn{font-family:var(--sans);font-size:12px;border:1px solid color-mix(in srgb,var(--ink) 30%,transparent);background:transparent;color:var(--ink);border-radius:999px;padding:5px 12px;cursor:pointer}
+.phasebtn[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+.badge{font-family:var(--sans);font-size:10px;padding:4px 9px;border-radius:999px;border:1px solid color-mix(in srgb,var(--ink) 25%,transparent);white-space:nowrap}
+.badge b{color:#3d7a44} html[data-phase="night"] .badge b{color:#9ed08a}
+.clockstat{font-family:var(--sans);font-size:11px;letter-spacing:.14em;color:var(--ink);opacity:.85;white-space:nowrap}
+.clockstat .cdot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--accent);margin-right:7px;vertical-align:1px}
+main{display:block}
+
+.mapimg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;transition:filter 1.2s ease}
+html[data-phase="noon"] .mapimg{filter:brightness(1.07) saturate(1.08)}
+html[data-phase="dusk"] .mapimg{filter:sepia(.30) hue-rotate(-10deg) brightness(.93)}
+html[data-phase="night"] .mapimg{filter:brightness(.48) hue-rotate(14deg) saturate(.75)}
+.routeSvg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:3}
+.route-sp{display:none}
+.scrim{position:absolute;left:0;right:0;bottom:0;height:36%;background:linear-gradient(transparent,rgba(10,16,24,.45));pointer-events:none;z-index:2}
+.lamp{position:absolute;width:38px;height:38px;border-radius:50%;transform:translate(-50%,-50%);background:radial-gradient(circle,rgba(255,198,90,.95) 0%,rgba(255,176,66,.42) 40%,transparent 70%);opacity:var(--glow-o);transition:opacity 1.2s ease;pointer-events:none;mix-blend-mode:screen;z-index:3}
+.spot{left:var(--x);top:var(--y)}
+.sp-sanmon{--x:51.5%;--y:82%} .sp-chozuya{--x:33.8%;--y:68.2%} .sp-hondo{--x:49.8%;--y:33.2%}
+.sp-bell{--x:64.5%;--y:56.2%} .sp-pond{--x:18.8%;--y:78.4%} .sp-shoin{--x:79.7%;--y:50%}
+.sp-pagoda{--x:20.4%;--y:26.8%} .sp-kyozo{--x:33.1%;--y:54%} .sp-hodo{--x:49.8%;--y:12.8%}
+
+/* ---------- HERO MAP ---------- */
+.hero{position:relative;padding:16px 12px 26px}
+.mapwrap{position:relative;max-width:1240px;margin:0 auto;border-radius:20px;overflow:hidden;background:#f6f3ec;box-shadow:0 24px 60px rgba(20,26,34,.20);aspect-ratio:3/2}
+.herohead{max-width:1240px;margin:0 auto 14px;display:flex;justify-content:space-between;align-items:flex-end;gap:16px;padding:0 4px}
+.mapwrap svg.map{position:absolute;inset:0;width:100%;height:100%}
+.mapwrap .nightveil{position:absolute;inset:0;background:#0d1524;opacity:var(--night-o);pointer-events:none;transition:opacity 1.2s ease}
+.hero h1{font-size:clamp(28px,4.6vw,52px);letter-spacing:.14em;margin:0;color:var(--ink)}
+.hero h1 .yomi{display:block;font-size:11px;letter-spacing:.32em;margin-bottom:7px;font-family:var(--sans);color:var(--accent)}
+.hero .tagline{color:var(--ink);font-size:clamp(14px,2vw,20px);letter-spacing:.08em;text-align:right}
+.hero .tagline small{display:block;font-family:var(--sans);font-size:11px;letter-spacing:.12em;margin-top:6px;opacity:.75}
+.spot{position:absolute;z-index:6;transform:translate(-50%,-100%);background:var(--card);color:var(--ink);border:1px solid rgba(43,47,51,.25);border-radius:8px;padding:6px 10px 5px;font-family:var(--serif);cursor:pointer;box-shadow:0 6px 18px rgba(15,20,28,.28);text-align:center;transition:transform .25s ease, box-shadow .25s ease}
+.spot .no{font-family:var(--sans);font-size:9px;letter-spacing:.2em;color:var(--accent);display:block}
+.spot .nm{font-size:15px;letter-spacing:.14em;white-space:nowrap}
+.spot::after{content:"";position:absolute;left:50%;bottom:-7px;width:8px;height:8px;background:inherit;border-right:1px solid rgba(43,47,51,.25);border-bottom:1px solid rgba(43,47,51,.25);transform:translateX(-50%) rotate(45deg)}
+.spot:hover,.spot:focus-visible{transform:translate(-50%,-108%) scale(1.05)}
+.spot.hit{animation:cardhit .9s ease}
+@keyframes cardhit{0%{transform:translate(-50%,-100%)}25%{transform:translate(-50%,-100%) rotate(-2.2deg) scale(1.07);box-shadow:0 0 0 6px rgba(232,179,75,.35),0 10px 24px rgba(15,20,28,.3)}60%{transform:translate(-50%,-100%) rotate(1.4deg)}100%{transform:translate(-50%,-100%)}}
+.routehint{position:absolute;right:26px;top:84px;z-index:5;color:#f7f3e6;font-family:var(--sans);font-size:11px;letter-spacing:.16em;text-shadow:0 1px 10px rgba(10,16,24,.65)}
+.scrolldown{margin:14px auto 18px;font-family:var(--sans);font-size:11px;letter-spacing:.3em;opacity:.75;text-align:center}
+/* spot panel (bottom sheet) */
+.sheet{position:fixed;left:50%;bottom:14px;transform:translate(-50%,140%);width:min(560px,calc(100vw - 24px));background:#fbf9f3;color:#2b2f33;border-radius:14px;box-shadow:0 18px 50px rgba(10,15,22,.35);padding:18px 20px 16px;z-index:70;transition:transform .35s cubic-bezier(.2,.9,.25,1)}
+.sheet.open{transform:translate(-50%,0)}
+.sheet h3{margin:0 0 6px;font-size:19px;letter-spacing:.12em}
+.sheet p{margin:0 0 12px;font-size:14px;line-height:1.8}
+.sheet .go{display:inline-block;font-family:var(--sans);font-size:12px;background:#2b2f33;color:#f7f3e6;border-radius:999px;padding:8px 16px;text-decoration:none}
+.sheet .close{position:absolute;top:8px;right:12px;border:0;background:none;font-size:18px;cursor:pointer;color:#2b2f33}
+/* ---------- SECTIONS ---------- */
+section.spotsec{max-width:880px;margin:0 auto;padding:110px 22px 30px}
+section.spotsec .kicker{font-family:var(--sans);font-size:11px;letter-spacing:.3em;color:var(--accent)}
+section.spotsec h2{font-size:clamp(26px,4.4vw,40px);letter-spacing:.14em;margin:10px 0 14px}
+section.spotsec p.lead{font-size:16px;line-height:2.05}
+.demo{background:color-mix(in srgb,var(--card) 88%,transparent);border:1px solid color-mix(in srgb,var(--ink) 16%,transparent);border-radius:14px;padding:18px;margin-top:22px}
+.demo h3{margin:0 0 8px;font-size:15px;letter-spacing:.1em}
+.demo p{font-size:13.5px;line-height:1.9;margin:6px 0}
+.btn{font-family:var(--sans);font-size:13px;border-radius:999px;border:1px solid var(--ink);background:var(--ink);color:var(--paper);padding:9px 20px;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--ink)}
+input.phrase{font-family:var(--serif);font-size:16px;padding:10px 12px;border-radius:8px;border:1px solid color-mix(in srgb,var(--ink) 35%,transparent);background:#fff;color:#2b2f33;width:min(340px,100%)}
+canvas.stage{display:block;width:100%;height:auto;border-radius:10px;background:#22384c}
+.reflectbox{position:relative;height:150px;border-radius:10px;overflow:hidden;background:linear-gradient(180deg,#8fa9bb,#5f7f96)}
+.reflectbox .base{position:absolute;inset:auto 0 52% 0;text-align:center;font-size:34px;letter-spacing:.3em;color:#f4efdd;padding-top:16px}
+.reflectbox .refl{position:absolute;inset:52% 0 auto 0;text-align:center;font-size:34px;letter-spacing:.3em;color:rgba(244,239,221,.75);transform:scaleY(-1);filter:url(#wobble)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;margin-top:20px}
+.card{background:var(--card);color:#2b2f33;border:1px solid rgba(43,47,51,.16);border-radius:12px;padding:16px 16px 14px;text-decoration:none;display:block;transition:transform .2s ease}
+html[data-phase="night"] .card{color:#e8e2d2}
+.card:hover{transform:translateY(-3px)}
+.card .t{font-size:15.5px;line-height:1.7;letter-spacing:.04em}
+.card .m{font-family:var(--sans);font-size:11px;opacity:.75;margin-top:8px;letter-spacing:.08em}
+.card .tag{display:inline-block;font-family:var(--sans);font-size:10px;border:1px solid currentColor;border-radius:999px;padding:2px 8px;margin-bottom:10px;letter-spacing:.14em}
+/* minimap */
+.minimap{position:fixed;left:14px;bottom:14px;z-index:65;background:color-mix(in srgb,var(--card) 92%,transparent);border:1px solid color-mix(in srgb,var(--ink) 18%,transparent);border-radius:12px;padding:8px 10px 6px;box-shadow:0 10px 30px rgba(10,15,22,.22)}
+.minimap .cap{font-family:var(--sans);font-size:9px;letter-spacing:.24em;opacity:.7;margin-bottom:4px;color:#2b2f33}
+html[data-phase="night"] .minimap .cap{color:#e8e2d2}
+.minimap button{display:block;width:100%;text-align:left;border:0;background:none;font-family:var(--sans);font-size:11px;padding:3px 4px;cursor:pointer;color:#2b2f33;border-radius:6px}
+html[data-phase="night"] .minimap button{color:#e8e2d2}
+.minimap button .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#b9b2a0;margin-right:7px;vertical-align:1px}
+.minimap button.now .dot{background:var(--warm);box-shadow:0 0 8px var(--warm)}
+.minimap button.now{background:color-mix(in srgb,var(--warm) 18%,transparent)}
+#rippleCanvas{position:fixed;inset:0;z-index:55;pointer-events:none}
+footer{margin-top:120px;padding:70px 22px 90px;text-align:center;border-top:1px solid color-mix(in srgb,var(--ink) 14%,transparent)}
+footer .bye{font-size:22px;letter-spacing:.2em}
+footer nav{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:22px}
+footer nav a{font-family:var(--sans);font-size:12px;border:1px solid color-mix(in srgb,var(--ink) 30%,transparent);padding:8px 16px;border-radius:999px;text-decoration:none}
+footer small{display:block;margin-top:26px;font-family:var(--sans);font-size:10px;opacity:.65;letter-spacing:.1em;line-height:1.9}
+.note{font-family:var(--sans);font-size:11px;opacity:.75;line-height:1.9}
+@media (max-width:640px){
+  .routehint{display:none}
+  .spot .nm{font-size:12.5px}
+  .spot{padding:5px 8px 4px}
+  .minimap{left:10px;right:10px;bottom:10px;padding:6px 8px;display:flex;gap:2px;overflow-x:auto;align-items:center}
+  .minimap .cap{display:none}
+  .minimap button{font-size:10px;padding:4px 6px;width:auto;white-space:nowrap;flex:0 0 auto}
+  header.site .brand small{display:none}
+  .badge{display:none}
+  section.spotsec{padding-top:84px}
+
+  .route-pc{display:none} .route-sp{display:block}
+  .lamp{display:none}
+  .sp-sanmon{--x:51.8%;--y:88.7%} .sp-chozuya{--x:33.3%;--y:70.7%} .sp-hondo{--x:50.4%;--y:31.5%}
+  .sp-bell{--x:66.4%;--y:59.4%} .sp-pond{--x:17.1%;--y:81.4%} .sp-shoin{--x:83%;--y:49.4%}
+  .sp-pagoda{--x:17.8%;--y:28.6%} .sp-kyozo{--x:32.1%;--y:54.6%} .sp-hodo{--x:50.6%;--y:8.5%}
+  .mapwrap{aspect-ratio:1/2}
+  .herohead{flex-direction:column;align-items:flex-start}
+  .hero .tagline{text-align:left}
+
+}
+@media (prefers-reduced-motion: reduce){ html{scroll-behavior:auto} *{animation:none!important;transition:none!important} }
+
+/* ---------- app-style bottom navigation bar ---------- */
+.minimap{left:50%;right:auto;top:auto;bottom:12px;transform:translateX(-50%);border-radius:999px;padding:6px;max-width:96vw;width:auto;display:flex;flex-direction:row;align-items:center;gap:2px;overflow-x:auto;scrollbar-width:none}
+.minimap::-webkit-scrollbar{display:none}
+.minimap .cap{display:none}
+.minimap button{border-radius:999px;padding:7px 11px;white-space:nowrap;font-size:12px;width:auto;flex:0 0 auto}
+html .minimap button.now{background:var(--ink);color:var(--paper)}
+.minimap button.now .dot{background:var(--accent);box-shadow:none}
+.sheet{bottom:78px;transform:translate(-50%,calc(100% + 100px));visibility:hidden;transition:transform .35s cubic-bezier(.2,.9,.25,1),visibility 0s linear .35s}
+.sheet.open{transform:translate(-50%,0);visibility:visible;transition:transform .35s cubic-bezier(.2,.9,.25,1),visibility 0s}
+
+/* ---------- diegetic typography: text lives inside the map ---------- */
+.plaque{position:absolute;left:51.5%;top:75.5%;transform:translate(-50%,-50%);z-index:6;display:flex;align-items:center;background:linear-gradient(180deg,#4a3a2a,#37281c);border:2px solid #c8a75a;border-radius:6px;padding:8px 18px 9px;color:#ecd9a0;width:max-content;box-shadow:0 10px 24px rgba(10,15,22,.45), inset 0 0 0 3px rgba(0,0,0,.22);letter-spacing:.26em;font-size:clamp(17px,2.2vw,26px);margin:0;font-weight:600}
+.plaque .sango{writing-mode:vertical-rl;font-size:.5em;letter-spacing:.28em;border-right:1px solid rgba(236,217,160,.45);padding-right:.55em;margin-right:.65em}
+html[data-phase="night"] .plaque{box-shadow:0 0 24px rgba(240,180,80,.38),0 10px 24px rgba(0,0,0,.5), inset 0 0 0 3px rgba(0,0,0,.22)}
+.signboard{position:absolute;left:24%;top:93%;width:max-content;transform:translate(-50%,-100%) rotate(-1.4deg);z-index:6;background:linear-gradient(180deg,#f8f1de,#efe3c6);color:#3a3125;border:1px solid #b39b62;border-radius:4px;box-shadow:0 8px 18px rgba(10,15,22,.30), inset 0 0 0 3px #fbf7ea;padding:9px 14px 8px;font-size:clamp(12px,1.4vw,15px);letter-spacing:.05em;max-width:300px}
+.signboard small{display:block;font-family:var(--sans);font-size:10px;opacity:.75;margin-top:4px;letter-spacing:.06em;line-height:1.6}
+.signboard::before,.signboard::after{content:"";position:absolute;bottom:-13px;width:5px;height:13px;background:#6b543a;border-radius:0 0 2px 2px}
+.signboard::before{left:20px}.signboard::after{right:20px}
+.hud{position:absolute;top:10px;z-index:8;display:flex;align-items:center;gap:7px;background:rgba(16,22,32,.55);backdrop-filter:blur(6px);color:#f2ecdc;font-family:var(--sans);font-size:11px;letter-spacing:.1em;padding:6px 12px;border-radius:999px;text-decoration:none}
+.hud-left{left:10px}.hud-right{right:10px}
+.hud .cdot{width:7px;height:7px;border-radius:50%;background:var(--accent)}
+section.spotsec .kicker{display:inline-block;background:linear-gradient(180deg,#4a3a2a,#37281c);color:#ecd9a0;border:1px solid #c8a75a;border-radius:4px;padding:5px 12px;letter-spacing:.22em}
+.sp-sanmon{--x:38.5%;--y:90%}
+@media (max-width:640px){
+  .plaque{left:51.8%;top:84%;font-size:16px;padding:6px 13px 7px}
+  .signboard{left:50%;top:98.2%;max-width:250px;font-size:11.5px;transform:translate(-50%,-100%) rotate(1.2deg)}
+  .signboard small{display:none}
+  .sp-sanmon{--x:84%;--y:90%}
+  .hud-right{display:none}
+}
+
+/* ---------- camera flight ---------- */
+.world{position:absolute;inset:0;transform-origin:0 0;transition:transform 1.15s cubic-bezier(.25,.8,.25,1);will-change:transform}
+.spot{transform:translate(-50%,-100%) scale(var(--inv,1))}
+.plaque{transform:translate(-50%,-50%) scale(var(--inv,1))}
+.signboard{transform:translate(-50%,-100%) rotate(-1.4deg) scale(var(--inv,1))}
+.hud-reset{left:50%;right:auto;transform:translateX(-50%);border:0;cursor:pointer;opacity:0;visibility:hidden;transition:opacity .3s ease,visibility 0s linear .3s}
+.hud-reset.show{opacity:1;visibility:visible;transition:opacity .3s ease}
+@media (max-width:640px){ .signboard{transform:translate(-50%,-100%) rotate(1.2deg) scale(var(--inv,1))} }
+
+/* ---------- walk mode, sheet grab, mobile refinement ---------- */
+.hud-walk{top:auto;bottom:10px;right:10px;left:auto;background:var(--accent);color:#241a08;font-weight:700;border:0;cursor:pointer;box-shadow:0 8px 20px rgba(10,15,22,.35)}
+.sheetgrab{display:flex;justify-content:center;padding:2px 0 10px;cursor:grab;touch-action:none}
+.sheetgrab span{display:block;width:46px;height:5px;border-radius:99px;background:#c9c2ae}
+.mapwrap{touch-action:pan-y}
+@media (max-width:640px){
+  .hero{padding:10px 0 22px}
+  .mapwrap{border-radius:0;max-width:none}
+  .minimap{bottom:calc(12px + env(safe-area-inset-bottom))}
+  .spot{padding:8px 12px 7px}
+}
+
+/* ---------- real night map (generated night artwork) ---------- */
+html[data-phase="night"] .mapimg{filter:none}
+html[data-phase="night"] .nightveil{opacity:.10}
+html[data-phase="night"] .lamp{opacity:0}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <filter id="wobble" x="-5%" y="-40%" width="110%" height="180%">
+    <feTurbulence id="wobbleTurb" type="fractalNoise" baseFrequency="0.012 0.09" numOctaves="2" seed="7" result="n"/>
+    <feDisplacementMap id="wobbleDisp" in="SourceGraphic" in2="n" scale="7"/>
+  </filter>
+</svg>
+<canvas id="rippleCanvas" aria-hidden="true"></canvas>
+<main>
+  <!-- ================= HERO : PRECINCT MAP ================= -->
+  <div class="hero" id="top">
+    <div class="mapwrap" id="mapwrap" role="img" aria-label="訪夢平寺の境内図。山門から参道が本堂へ続き、手水舎、経蔵、鐘楼、池、書院、五重塔、法堂があります。">
+      <picture>
+        <source id="mapSrcSP" media="(max-width: 640px)" srcset="assets/keidai-map2-portrait.webp">
+        <img class="mapimg" src="assets/keidai-map2.webp" alt="" aria-hidden="true">
+      </picture>
+      <svg class="routeSvg route-pc" viewBox="0 0 1000 1000" preserveAspectRatio="none" aria-hidden="true">
+        <path d="M512 795 C 508 680, 504 540, 501 375" fill="none" stroke="#e8b34b" stroke-width="4" stroke-dasharray="2 12" stroke-linecap="round" opacity=".95"/>
+        <path d="M507 628 C 455 645, 395 662, 345 676" fill="none" stroke="#e8b34b" stroke-width="4" stroke-dasharray="2 12" stroke-linecap="round" opacity=".95"/>
+      </svg>
+      <svg class="routeSvg route-sp" viewBox="0 0 1000 1000" preserveAspectRatio="none" aria-hidden="true">
+        <path d="M516 862 C 511 700, 507 520, 505 352" fill="none" stroke="#e8b34b" stroke-width="5" stroke-dasharray="2 13" stroke-linecap="round" opacity=".95"/>
+        <path d="M511 655 C 445 675, 385 692, 340 702" fill="none" stroke="#e8b34b" stroke-width="5" stroke-dasharray="2 13" stroke-linecap="round" opacity=".95"/>
+      </svg>
+      <div class="lamp" style="left:45.7%;top:45.5%"></div><div class="lamp" style="left:54.6%;top:45.5%"></div>
+      <div class="lamp" style="left:45.3%;top:52.5%"></div><div class="lamp" style="left:54.7%;top:52.5%"></div>
+      <div class="lamp" style="left:45.2%;top:63.5%"></div><div class="lamp" style="left:56%;top:63.5%"></div>
+      <div class="nightveil"></div>
+      <h1 class="plaque"><span class="sango">電網山</span><span class="main">訪夢平寺</span></h1>
+      <div class="signboard">AIに疲れたら、お寺へどうぞ。<small>ポッドキャスト「AI am 坊主」のお寺 ― 住職・飯音三休（いいねさんきゅう）</small></div>
+      <span class="hud hud-left"><span class="cdot"></span><span id="clockStat">―</span></span>
+      <a class="hud hud-right" href="#sec-hondo">AI am 坊主 ― ポッドキャスト</a>
+      <button class="hud hud-reset" id="camReset" type="button">← 境内全体にもどる</button>
+      <button class="hud hud-walk" id="walkBtn" type="button">参道を歩く</button>
+      <button class="spot sp-sanmon" data-spot="sanmon"><span class="no">1 ― GATE</span><span class="nm">山門</span></button>
+      <button class="spot sp-chozuya" data-spot="chozuya"><span class="no">2 ― WATER</span><span class="nm">手水舎</span></button>
+      <button class="spot sp-hondo" data-spot="hondo"><span class="no">3 ― MAIN HALL</span><span class="nm">本堂</span></button>
+      <button class="spot sp-bell" id="bellSpot" data-spot="bell"><span class="no">BELL</span><span class="nm">鐘楼</span></button>
+      <button class="spot sp-pond" data-spot="pond"><span class="no">POND</span><span class="nm">庭・池</span></button>
+      <button class="spot sp-shoin" data-spot="shoin"><span class="no">LIBRARY</span><span class="nm">書院</span></button>
+      <button class="spot sp-pagoda" data-spot="pagoda"><span class="no">PAGODA</span><span class="nm">五重塔</span></button>
+      <button class="spot sp-kyozo" data-spot="kyozo"><span class="no">SUTRA</span><span class="nm">経蔵</span></button>
+      <button class="spot sp-hodo" data-spot="hodo"><span class="no">LECTURE HALL</span><span class="nm">法堂</span></button>
+    </div>
+    <div class="scrolldown">SCROLL ― 参道を歩く</div>
+  </div>
+
+<!-- ================= SPOT SECTIONS (the sando) ================= -->
+<section class="spotsec" id="sec-chozuya" data-mm="chozuya">
+<div class="kicker">2 ― 手水舎 CHOZUYA</div>
+<h2>手を清めてから、どうぞ</h2>
+<p class="lead">参拝の前に、手と口を清める場所。ここでは、寺の名前が水面に映ります。水は止まらないので、文字も止まりません。それでも、読める。――HTML-in-Canvasが目指すのは、そういう文字です。</p>
+<div class="demo">
+<h3>署名演出その1 ― 水面の寺号</h3>
+<div class="reflectbox" aria-hidden="true"><div class="base">訪夢平寺</div><div class="refl">訪夢平寺</div></div>
+<p class="note">水面の文字は、揺れていても文字のままです。触って選ぶことも、読み上げることもできます。</p>
+</div>
+</section>
+
+<section class="spotsec" id="sec-kyozo" data-mm="kyozo">
+<div class="kicker">経蔵 KYOZO</div>
+<h2>読まない本も、あります</h2>
+<p class="lead">経蔵には、一切経が収まっています。輪蔵を一回りさせると、全部読んだことになる――昔の人の、ありがたい知恵です。積ん読を責める前に、まず回しに来てください。住職の積ん読も、ここに混ぜてあります。</p>
+</section>
+
+<section class="spotsec" id="sec-hondo" data-mm="hondo">
+<div class="kicker">3 ― 本堂 HONDO</div>
+<h2>本堂では、法話を聴く</h2>
+<p class="lead">住職・飯音三休が、AI時代の悩みに仏教で答えるポッドキャスト「AI am 坊主」。再生はSpotifyで。本堂は、その入口です。</p>
+<div class="cards">
+<a class="card" href="https://open.spotify.com/show/4SH62LuyNGAdZAuJ1Tquhd" target="_blank" rel="noopener"><span class="tag">最新 ― SPOTIFY</span><div class="t">番組トップで最新話を聴く</div><div class="m">AI am 坊主 ― Spotify</div></a>
+<a class="card" href="https://open.spotify.com/show/4SH62LuyNGAdZAuJ1Tquhd" target="_blank" rel="noopener"><span class="tag">自己紹介</span><div class="t">焦燥したら、AIに220ドル課金していた件</div><div class="m">この寺ができた理由の話</div></a>
+<a class="card" href="https://www.instagram.com/aiambz/" target="_blank" rel="noopener"><span class="tag">法話リール</span><div class="t">短い法話は、InstagramとThreadsで毎日</div><div class="m">@aiambz</div></a>
+</div>
+</section>
+
+<section class="spotsec" id="sec-pagoda" data-mm="pagoda">
+<div class="kicker">五重塔 PAGODA</div>
+<h2>塔は、空に置く手紙</h2>
+<p class="lead">本堂の西に立つ五重塔。真ん中を貫く心柱が、揺れを逃がします。いちばん大事なものは、いちばん高いところに置く。手は届かなくても、そこにあるとわかるだけでいいものが、人生にはあります。</p>
+</section>
+
+<section class="spotsec" id="sec-hodo" data-mm="hodo">
+<div class="kicker">法堂 HODO</div>
+<h2>説法は、奥でします</h2>
+<p class="lead">本堂の真裏が法堂。法話をするための間です。ポッドキャスト「AI am 坊主」の法話も、気持ちの上では、ここから届けています。本堂で聴き足りなかったら、もう一歩奥へどうぞ。</p>
+</section>
+
+<section class="spotsec" id="sec-bell" data-mm="bell">
+<div class="kicker">鐘楼 SHORO</div>
+<h2>鐘は、境内ぜんたいに響く</h2>
+<p class="lead">鐘を撞くと、波紋がマップを渡り、触れたカードが小さく揺れます。音は出しません。波だけが、静かに届きます。</p>
+<div class="demo">
+<h3>署名演出その2 ― 鐘の波紋</h3>
+<p>下のボタンで、ファーストビューの境内図に波紋を広げます。通過したスポット札が揺れるのを見てください。</p>
+<button class="btn" id="ringBtn">鐘を撞く（波紋）</button>
+<button class="btn ghost" id="ringTopBtn">マップへ戻って撞く</button>
+</div>
+</section>
+
+<section class="spotsec" id="sec-pond" data-mm="pond">
+<div class="kicker">庭・池 GARDEN POND</div>
+<h2>言葉を、池に沈める</h2>
+<p class="lead">今の気持ちを短く書くと、水面に映ってから、静かに沈みます。送信も保存もされません。この場かぎりの、参拝です。</p>
+<div class="demo">
+<h3>署名演出その3 ― 池に沈む言葉</h3>
+<canvas id="pondCanvas" class="stage" width="880" height="420" content="drawable" aria-label="言葉が池に沈む演出のキャンバス">
+<div id="pondCard" drawable style="font-family:var(--serif);font-size:44px;letter-spacing:.18em;color:#f4efdd;background:transparent;padding:10px 18px;">ねむれない夜</div>
+</canvas>
+<p style="margin-top:12px">
+<input class="phrase" id="pondInput" maxlength="18" value="ねむれない夜" aria-label="沈めたい言葉">
+<button class="btn" id="pondBtn">水に沈める</button>
+<span class="note" id="pondStatus" role="status"></span>
+</p>
+<p class="note" id="pondTech"></p>
+</div>
+</section>
+
+<section class="spotsec" id="sec-shoin" data-mm="shoin">
+<div class="kicker">書院 SHOIN</div>
+<h2>言葉は、書院に残る</h2>
+<p class="lead">法話のテキストと短い言葉は、書院の棚に。読む参拝はこちらから。</p>
+<div class="cards">
+<a class="card" href="https://www.threads.com/@aiambz" target="_blank" rel="noopener"><span class="tag">THREADS</span><div class="t">言葉のカルーセルと法話</div><div class="m">@aiambz ― Threads</div></a>
+<a class="card" href="https://x.com/aiambz" target="_blank" rel="noopener"><span class="tag">X</span><div class="t">日々の短い一言</div><div class="m">@aiambz ― X</div></a>
+</div>
+<div class="demo" style="margin-top:26px">
+<h3>別院 ― あそび場（サブページ）</h3>
+<p>この寺には、個人開発のWebアプリやミニゲームを置く「別院」が順次ひらきます。公開のたびにSNSでお知らせします。驚きのあるものだけを、置きます。</p>
+<div class="cards">
+<div class="card"><span class="tag">近日公開</span><div class="t">百八の鐘 ― タップで撞く小さな除夜の鐘</div><div class="m">ミニゲーム ― 試作中</div></div>
+<div class="card"><span class="tag">近日公開</span><div class="t">写経なぞり ― 一節をなぞると墨がにじむ</div><div class="m">Webアプリ ― 試作中</div></div>
+<div class="card"><span class="tag">近日公開</span><div class="t">今夜の池 ― 言葉を沈めるだけの場所</div><div class="m">Webアプリ ― 試作中</div></div>
+</div>
+</div>
+</section>
+</main>
+
+<div class="sheet" id="sheet" role="dialog" aria-modal="false" aria-labelledby="sheetTitle">
+<div class="sheetgrab" id="sheetGrab" aria-hidden="true"><span></span></div>
+<button class="close" id="sheetClose" aria-label="閉じる">×</button>
+<h3 id="sheetTitle"></h3><p id="sheetBody"></p>
+<a class="go" id="sheetGo" href="#">この場所へ行く</a>
+<button class="btn ghost" id="sheetBell" style="display:none;margin-left:8px">鐘を撞く</button>
+</div>
+
+<nav class="minimap" aria-label="境内案内（ミニマップ）">
+<div class="cap">境内案内 ― 現在地</div>
+<button data-goto="top"><span class="dot"></span>山門・境内図</button>
+<button data-goto="sec-chozuya"><span class="dot"></span>手水舎</button>
+<button data-goto="sec-hondo"><span class="dot"></span>本堂</button>
+<button data-goto="sec-hodo"><span class="dot"></span>法堂</button>
+<button data-goto="sec-pagoda"><span class="dot"></span>五重塔</button>
+<button data-goto="sec-kyozo"><span class="dot"></span>経蔵</button>
+<button data-goto="sec-bell"><span class="dot"></span>鐘楼</button>
+<button data-goto="sec-pond"><span class="dot"></span>庭・池</button>
+<button data-goto="sec-shoin"><span class="dot"></span>書院・別院</button>
+</nav>
+
+<footer>
+<div class="bye">また、お越しください</div>
+<nav>
+<a href="https://open.spotify.com/show/4SH62LuyNGAdZAuJ1Tquhd" target="_blank" rel="noopener">Spotify</a>
+<a href="https://www.instagram.com/aiambz/" target="_blank" rel="noopener">Instagram</a>
+<a href="https://www.threads.com/@aiambz" target="_blank" rel="noopener">Threads</a>
+<a href="https://x.com/aiambz" target="_blank" rel="noopener">X</a>
+</nav>
+<small>電網山 訪夢平寺は、ポッドキャスト「AI am 坊主」の架空のお寺です。実在の寺院ではありません。<br>試作ページ ― Astro SSG / GitHub Pages への移植を前提に、依存ゼロの静的HTMLで構築。</small>
+</footer>
+
+<script is:inline>
+"use strict";
+const $=(s,c=document)=>c.querySelector(s), $$=(s,c=document)=>[...c.querySelectorAll(s)];
+const root=document.documentElement;
+const reduceMotion=matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+/* ---------- HTML-in-Canvas support detection ---------- */
+const hic = (()=>{ try{
+const t=document.createElement("canvas");
+const ctx=t.getContext("2d");
+return!!(ctx && typeof ctx.drawElementImage==="function");
+}catch(e){ return false}})();
+
+/* ---------- phases: driven by the real clock, not by the user ---------- */
+const PHASE_LABEL={dawn:"暁の境内",noon:"昼の境内",dusk:"夕の境内",night:"夜の境内"};
+function phaseFromClock(d){ const h=d.getHours();
+  if(h>=5&&h<8) return "dawn"; if(h>=8&&h<16) return "noon"; if(h>=16&&h<19) return "dusk"; return "night"; }
+const MAPS={ day:["assets/keidai-map2.webp","assets/keidai-map2-portrait.webp"],
+             night:["assets/keidai-map2-night.webp","assets/keidai-map2-night-portrait.webp"] };
+let lastPhase="";
+function applyMapArt(p){
+  const pair = p==="night"? MAPS.night : MAPS.day;
+  const img=$(".mapimg"), sp=$("#mapSrcSP");
+  if(img && img.getAttribute("src")!==pair[0]) img.setAttribute("src", pair[0]);
+  if(sp && sp.getAttribute("srcset")!==pair[1]) sp.setAttribute("srcset", pair[1]);
+}
+(function preloadNight(){ MAPS.night.forEach(u=>{ const i=new Image(); i.src=u; }); })();
+function tickClock(){
+  const d=new Date(), p=phaseFromClock(d);
+  root.dataset.phase=p;
+  if(p!==lastPhase){ applyMapArt(p); lastPhase=p; }
+  const hh=String(d.getHours()).padStart(2,"0"), mm=String(d.getMinutes()).padStart(2,"0");
+  $("#clockStat").textContent=PHASE_LABEL[p]+" ― "+hh+":"+mm;
+}
+tickClock(); setInterval(tickClock, 30000);
+
+
+/* ---------- camera: fly, drag, pinch, walk ---------- */
+const mapwrap=$("#mapwrap");
+const world=document.createElement("div"); world.className="world"; world.id="world";
+[...mapwrap.children].forEach(ch=>{ if(!ch.classList.contains("hud")) world.appendChild(ch); });
+mapwrap.appendChild(world);
+const camReset=$("#camReset"), walkBtn=$("#walkBtn");
+let cam={s:1,tx:0,ty:0};
+function clampCam(){ const W=mapwrap.clientWidth,H=mapwrap.clientHeight;
+  cam.tx=Math.min(0,Math.max(W-W*cam.s,cam.tx)); cam.ty=Math.min(0,Math.max(H-H*cam.s,cam.ty)); }
+function applyCam(anim){
+  world.style.transition=anim===false? "none": "";
+  world.style.transform="translate("+cam.tx+"px,"+cam.ty+"px) scale("+cam.s+")";
+  world.style.setProperty("--inv",String(1/cam.s));
+  camReset.classList.toggle("show",cam.s>1.02);
+  mapwrap.style.touchAction=cam.s>1.02? "none":"pan-y";
+  if(anim===false) requestAnimationFrame(()=>{ world.style.transition=""; });
+}
+function spotXY(el){ const cs=getComputedStyle(el); return [parseFloat(cs.getPropertyValue("--x")), parseFloat(cs.getPropertyValue("--y"))]; }
+function flyTo(x,y){
+  const W=mapwrap.clientWidth,H=mapwrap.clientHeight;
+  cam.s=innerWidth<=640?2.6:2.2;
+  cam.tx=W/2-(x/100*W)*cam.s; cam.ty=H/2-(y/100*H)*cam.s;
+  clampCam(); applyCam(true); travelDot(x,y);
+  if(navigator.vibrate) setTimeout(()=>navigator.vibrate(10), reduceMotion?0:1150);
+}
+function resetCam(){ cam={s:1,tx:0,ty:0}; applyCam(true); walkIdx=-1; syncWalk(); }
+camReset.addEventListener("click",()=>{ resetCam(); closeSheet(); });
+addEventListener("keydown",e=>{ if(e.key==="Escape"){ resetCam(); closeSheet(); } });
+function travelDot(x,y){
+  if(reduceMotion) return;
+  const svg=innerWidth<=640? $(".route-sp") : $(".route-pc"); if(!svg) return;
+  const paths=[...svg.querySelectorAll("path")], tx=x*10, ty=y*10; let best=null;
+  paths.forEach(p=>{ const L=p.getTotalLength();
+    for(let i=0;i<=80;i++){ const pt=p.getPointAtLength(L*i/80);
+      const d=(pt.x-tx)*(pt.x-tx)+(pt.y-ty)*(pt.y-ty);
+      if(!best||d<best.d) best={p:p,d:d,len:L*i/80}; } });
+  if(!best) return;
+  const c=document.createElementNS("http://www.w3.org/2000/svg","circle");
+  c.setAttribute("r","11"); c.setAttribute("fill","#f2b64b");
+  c.setAttribute("stroke","#fff7e0"); c.setAttribute("stroke-width","3");
+  svg.appendChild(c);
+  const t0=performance.now(), dur=1000;
+  (function step(now){
+    const pr=Math.min(1,(now-t0)/dur), e=pr<.5? 2*pr*pr : 1-Math.pow(-2*pr+2,2)/2;
+    const pt=best.p.getPointAtLength(best.len*e);
+    c.setAttribute("cx",pt.x); c.setAttribute("cy",pt.y);
+    c.setAttribute("opacity", String(pr>.8? (1-pr)*5 : 1));
+    if(pr<1) requestAnimationFrame(step); else c.remove();
+  })(t0);
+}
+/* drag to look around / pinch to zoom, once flown in */
+const pointers=new Map(); let dragMoved=false, pinchD0=0, pinchS0=1;
+mapwrap.addEventListener("pointerdown",e=>{
+  if(e.target.closest(".hud")) return;
+  pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(pointers.size===2){ const v=[...pointers.values()];
+    pinchD0=Math.hypot(v[0].x-v[1].x, v[0].y-v[1].y); pinchS0=cam.s; }
+});
+addEventListener("pointermove",e=>{
+  if(!pointers.has(e.pointerId)) return;
+  const prev=pointers.get(e.pointerId), dx=e.clientX-prev.x, dy=e.clientY-prev.y;
+  pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(pointers.size===1 && cam.s>1.02){
+    if(Math.abs(dx)+Math.abs(dy)>2) dragMoved=true;
+    cam.tx+=dx; cam.ty+=dy; clampCam(); applyCam(false);
+  }else if(pointers.size===2){
+    dragMoved=true;
+    const v=[...pointers.values()], d=Math.hypot(v[0].x-v[1].x, v[0].y-v[1].y);
+    if(pinchD0>0){
+      const r=mapwrap.getBoundingClientRect(), mx=(v[0].x+v[1].x)/2-r.left, my=(v[0].y+v[1].y)/2-r.top;
+      const ns=Math.min(3.4,Math.max(1,pinchS0*d/pinchD0));
+      const wx=(mx-cam.tx)/cam.s, wy=(my-cam.ty)/cam.s;
+      cam.s=ns; cam.tx=mx-wx*ns; cam.ty=my-wy*ns; clampCam(); applyCam(false);
+    }
+  }
+});
+function ptrEnd(e){ pointers.delete(e.pointerId); if(pointers.size<2) pinchD0=0;
+  if(pointers.size===0) setTimeout(()=>{ dragMoved=false; },60); }
+addEventListener("pointerup",ptrEnd); addEventListener("pointercancel",ptrEnd);
+mapwrap.addEventListener("click",e=>{ if(dragMoved){ e.preventDefault(); e.stopPropagation(); } },true);
+/* walk the sando, one tap per step */
+const WALK=[["sanmon","山門"],["chozuya","手水舎"],["hondo","本堂"],["hodo","法堂"]];
+let walkIdx=-1;
+function syncWalk(){ if(!walkBtn) return;
+  walkBtn.textContent = walkIdx<0? "参道を歩く" : (walkIdx>=WALK.length-1? "お参りをおえる" : "次は "+WALK[walkIdx+1][1]+" へ"); }
+walkBtn.addEventListener("click",()=>{
+  $("#top").scrollIntoView({behavior:reduceMotion?"auto":"smooth"});
+  if(walkIdx>=WALK.length-1){ resetCam(); closeSheet(); return; }
+  walkIdx++;
+  const key=WALK[walkIdx][0], btn=document.querySelector('.spot[data-spot="'+key+'"]');
+  const xy=spotXY(btn); flyTo(xy[0],xy[1]); openSheet(key); syncWalk();
+});
+syncWalk();
+
+/* ---------- minimap: current position + flight ---------- */
+const mmBtns=$$(".minimap button");
+const mmMap={ "top":null,"sec-chozuya":"chozuya","sec-kyozo":"kyozo","sec-hondo":"hondo","sec-pagoda":"pagoda","sec-hodo":"hodo","sec-bell":"bell","sec-pond":"pond","sec-shoin":"shoin"};
+mmBtns.forEach(b=>b.addEventListener("click",()=>{
+const id=b.dataset.goto;
+$("#top").scrollIntoView({behavior:reduceMotion?"auto":"smooth"});
+if(id==="top"){ resetCam(); closeSheet(); return; }
+const key=mmMap[id], btn=key&&document.querySelector('.spot[data-spot="'+key+'"]');
+if(btn){ const xy=spotXY(btn); flyTo(xy[0],xy[1]); openSheet(key); walkIdx=WALK.findIndex(w=>w[0]===key); syncWalk(); }
+}));
+const secObs=new IntersectionObserver(es=>{
+es.forEach(e=>{
+if(!e.isIntersecting) return;
+const key=e.target.id==="top"?"top":e.target.id;
+mmBtns.forEach(b=>b.classList.toggle("now", b.dataset.goto===key));
+});
+},{rootMargin:"-38% 0px -50% 0px"});
+secObs.observe($("#top")); $$("section.spotsec").forEach(s=>secObs.observe(s));
+
+/* ---------- spot sheet ---------- */
+const SPOTS={
+sanmon:{t:"山門",b:"ここが入口です。順路は、手水舎、本堂の順。札や下の案内をタップすると、境内を飛んでその場所までご案内します。",go:"#sec-chozuya",gol:"参道へ進む"},
+chozuya:{t:"手水舎",b:"寺号が水面に映る場所。文字は揺れても、実DOMのまま読める――それがこの寺の文字です。",go:"#sec-chozuya",gol:"手水舎へ行く"},
+hondo:{t:"本堂",b:"法話を聴く場所。最新話と自己紹介エピソードへの入口があります。再生はSpotifyで。",go:"#sec-hondo",gol:"本堂へ行く"},
+bell:{t:"鐘楼",b:"鐘を撞くと波紋が境内を渡り、札が揺れます。音は出ません。",go:"#sec-bell",gol:"鐘楼へ行く",bell:true},
+pond:{t:"庭・池",b:"言葉を書くと、水面に映って沈む場所。送信も保存もされません。",go:"#sec-pond",gol:"池へ行く"},
+pagoda:{name:"五重塔",en:"PAGODA",desc:"本堂の西。心柱が揺れを逃がす、空に置く手紙。"},
+    kyozo:{name:"経蔵",en:"SUTRA STOREHOUSE",desc:"一切経の蔵。輪蔵を一回りさせれば、全部読んだことになります。"},
+    hodo:{name:"法堂",en:"LECTURE HALL",desc:"本堂の真裏。法話の間。配信も、気持ちはここから。"},
+    shoin:{t:"書院",b:"法話の言葉と、別院（Webアプリ・ミニゲーム）の棚。",go:"#sec-shoin",gol:"書院へ行く"}
+};
+const sheet=$("#sheet");
+function openSheet(key){
+const s=SPOTS[key]; if(!s) return;
+$("#sheetTitle").textContent=s.t; $("#sheetBody").textContent=s.b;
+const go=$("#sheetGo"); go.textContent=s.gol; go.setAttribute("href",s.go);
+$("#sheetBell").style.display=s.bell?"inline-block":"none";
+sheet.classList.add("open");
+}
+function closeSheet(){ sheet.classList.remove("open");}
+const sheetGoEl=$(".sheet .go"); if(sheetGoEl) sheetGoEl.addEventListener("click",()=>resetCam());
+(function(){
+  const grab=$("#sheetGrab"), sheetEl=$("#sheet"); if(!grab||!sheetEl) return;
+  let y0=null, dy=0;
+  grab.addEventListener("pointerdown",e=>{ y0=e.clientY; dy=0; sheetEl.style.transition="none"; grab.setPointerCapture(e.pointerId); });
+  grab.addEventListener("pointermove",e=>{ if(y0===null) return; dy=Math.max(0,e.clientY-y0);
+    sheetEl.style.transform="translate(-50%,"+dy+"px)"; });
+  grab.addEventListener("pointerup",()=>{ sheetEl.style.transition=""; sheetEl.style.transform="";
+    if(dy>70) closeSheet(); y0=null; });
+})();
+$$(".spot").forEach(b=>b.addEventListener("click",()=>{ openSheet(b.dataset.spot); const xy=spotXY(b); flyTo(xy[0],xy[1]); walkIdx=WALK.findIndex(w=>w[0]===b.dataset.spot); syncWalk(); }));
+$("#sheetClose").addEventListener("click",closeSheet);
+$("#sheetGo").addEventListener("click",closeSheet);
+document.addEventListener("keydown",e=>{ if(e.key==="Escape") closeSheet();});
+
+/* ---------- bell ripple across the map (signature 2) ---------- */
+const rc=$("#rippleCanvas"), rctx=rc.getContext("2d");
+function sizeRipple(){ rc.width=innerWidth*devicePixelRatio; rc.height=innerHeight*devicePixelRatio; }
+sizeRipple(); addEventListener("resize",sizeRipple);
+let ripples=[];
+function ringBell(fromEl){
+  const wrap=$("#mapwrap").getBoundingClientRect();
+  const bell=$("#bellSpot").getBoundingClientRect();
+  const cx=(bell.left+bell.width/2), cy=(bell.top+bell.height/2);
+  const inView = wrap.bottom>0 && wrap.top<innerHeight;
+  ripples.push({x:cx,y:cy,r:0,max:Math.hypot(innerWidth,innerHeight),born:performance.now()});
+  if(!reduceMotion) requestAnimationFrame(rippleLoop);
+  // cards are "hit" when the wavefront reaches them
+  $$(".spot").forEach(sp=>{
+    const r=sp.getBoundingClientRect();
+    const d=Math.hypot(r.left+r.width/2-cx, r.top+r.height/2-cy);
+    setTimeout(()=>{ sp.classList.remove("hit"); void sp.offsetWidth; sp.classList.add("hit"); }, reduceMotion?0:d/1.1);
+  });
+  return inView;
+}
+function rippleLoop(now){
+  rctx.clearRect(0,0,rc.width,rc.height);
+  const dpr=devicePixelRatio;
+  ripples=ripples.filter(rp=>rp.r<rp.max);
+  for(const rp of ripples){
+    rp.r+= (reduceMotion?0:7.5)*dpr;
+    for(let k=0;k<3;k++){
+      const rr=rp.r-k*26*dpr; if(rr<=0) continue;
+      rctx.beginPath(); rctx.arc(rp.x*dpr,rp.y*dpr,rr,0,Math.PI*2);
+      rctx.strokeStyle=`rgba(232,179,75,${Math.max(0,.55*(1-rp.r/rp.max)-k*.12)})`;
+      rctx.lineWidth=2.2*dpr; rctx.stroke();
+    }
+  }
+  if(ripples.length) requestAnimationFrame(rippleLoop); else rctx.clearRect(0,0,rc.width,rc.height);
+}
+$("#sheetBell").addEventListener("click",()=>{ closeSheet(); $("#top").scrollIntoView({behavior:reduceMotion?"auto":"smooth"}); setTimeout(()=>ringBell(), reduceMotion?0:650); });
+$("#ringBtn").addEventListener("click",()=>{ $("#top").scrollIntoView({behavior:reduceMotion?"auto":"smooth"}); setTimeout(()=>ringBell(), reduceMotion?0:650); });
+$("#ringTopBtn").addEventListener("click",()=>{ $("#top").scrollIntoView({behavior:reduceMotion?"auto":"smooth"}); });
+
+/* ---------- chozuya reflection wobble ---------- */
+(()=>{ const disp=$("#wobbleDisp"), turb=$("#wobbleTurb"); if(!disp||reduceMotion) return;
+  let t=0; (function anim(){ t+=.016; disp.setAttribute("scale", String(6+Math.sin(t*.9)*2.4)); turb.setAttribute("baseFrequency", `${0.012+Math.sin(t*.5)*.002} 0.09`); requestAnimationFrame(anim); })();
+})();
+
+/* ---------- pond : sinking words (signature 3) ---------- */
+const pc=$("#pondCanvas"), pctx=pc.getContext("2d");
+const pondCard=$("#pondCard");
+let pondNative = hic;
+function drawPondScene(text, prog){
+  const W=pc.width,H=pc.height;
+  const g=pctx.createLinearGradient(0,0,0,H);
+  const night=root.dataset.phase==="night";
+  g.addColorStop(0, night?"#2c4a66":"#7fa3ba"); g.addColorStop(1, night?"#16283c":"#41657f");
+  pctx.clearRect(0,0,W,H); pctx.fillStyle=g; pctx.fillRect(0,0,W,H);
+  // lantern / moon glow
+  pctx.fillStyle="rgba(240,220,160,.20)"; pctx.beginPath(); pctx.ellipse(W*.78,H*.22,150,44,0,0,Math.PI*2); pctx.fill();
+  // ripples
+  pctx.strokeStyle="rgba(240,244,246,.35)"; pctx.lineWidth=1.6;
+  for(let i=0;i<4;i++){ const rr=26+i*22+((prog*140)%22);
+    pctx.globalAlpha=Math.max(0,.5-i*.11-(prog*.25));
+    pctx.beginPath(); pctx.ellipse(W/2,H*.46+prog*150, rr*2.1, rr*.62,0,0,Math.PI*2); pctx.stroke(); }
+  pctx.globalAlpha=1;
+  const yBase=H*.40+prog*(H*.42), alpha=1-prog*prog;
+  const slices=16, sh=H*.16;
+  let drawnNative=false;
+  if(pondNative){
+    try{
+      const prev=pctx.globalAlpha; pctx.globalAlpha=alpha;
+      for(let i=0;i<slices;i++){
+        const off=Math.sin(prog*9+i*.85)* (2+prog*13);
+        // 9-arg drawElementImage: source slice -> destination slice with sine offset
+        pctx.drawElementImage(pondCard, 0, i*(pondCard.offsetHeight/slices), pondCard.offsetWidth, pondCard.offsetHeight/slices,
+                                     W/2-pondCard.offsetWidth/2+off, yBase+i*(sh/slices), pondCard.offsetWidth, sh/slices);
+      }
+      pctx.globalAlpha=prev; drawnNative=true;
+    }catch(e){ pondNative=false; }
+  }
+  if(!drawnNative){
+    pctx.save(); pctx.globalAlpha=alpha;
+    pctx.font="44px 'Hiragino Mincho ProN','Yu Mincho',serif"; pctx.textAlign="center"; pctx.fillStyle="#f4efdd";
+    for(let i=0;i<slices;i++){
+      const off=Math.sin(prog*9+i*.85)*(2+prog*13);
+      pctx.save(); pctx.beginPath(); pctx.rect(0, yBase+i*(sh/slices)-sh/2, W, sh/slices+1); pctx.clip();
+      pctx.fillText(text, W/2+off, yBase+16); pctx.restore();
+    }
+    pctx.restore();
+  }
+  return drawnNative;
+}
+(function pondIdle(){ drawPondScene($("#pondInput").value||"ねむれない夜", 0); })();
+$("#pondTech").textContent = "";
+let pondAnim=null;
+$("#pondBtn").addEventListener("click",()=>{
+  const text=($("#pondInput").value||"ねむれない夜").slice(0,18);
+  pondCard.textContent=text;
+  $("#pondStatus").textContent="";
+  if(pondAnim) cancelAnimationFrame(pondAnim);
+  if(reduceMotion){ drawPondScene(text,1); $("#pondStatus").textContent="沈みました。この気持ちに近い法話は、本堂にあります。"; return; }
+  const t0=performance.now(), dur=3400; let usedNative=null;
+  (function step(now){
+    const p=Math.min(1,(now-t0)/dur), e=p*p*(3-2*p);
+    const n=drawPondScene(text,e); if(usedNative===null) usedNative=n;
+    if(p<1){ pondAnim=requestAnimationFrame(step); }
+    else{
+      drawPondScene(text,0);
+      $("#pondStatus").textContent="沈みました。この気持ちに近い法話は、本堂にあります。";
+      if(usedNative!==null) $("#pondTech").textContent = "";
+    }
+  })(t0);
+});
+$("#pondInput").addEventListener("input",e=>{ pondCard.textContent=e.target.value; drawPondScene(e.target.value||" ",0); });
+</script>
+</body>
+</html>
